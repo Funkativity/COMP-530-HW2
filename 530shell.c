@@ -9,6 +9,7 @@
 #include <string.h>
 #include <signal.h>
 #include <sys/wait.h>
+#include <sys/stat.h>
 #define MAX_ARGS 100
 #define MAX_LENGTH 1000
 
@@ -29,6 +30,8 @@ void ctrlCSignalHandler(int signal_number){
 //     numChildProcesses--;
 // }
 
+// string parser, splits up a string (command) ending with \n based off spaces
+// writes them into array of strings argv
 void parseArgs(char *command, char **argv){
     char *token = strtok(command, " \n");
     *argv++ = token;
@@ -55,30 +58,68 @@ int main (int argc, char* argv) {
             char c;
             while ((c = fgetc(stdin)) != '\n' && c != EOF);
         }
+
         // valid input
         else {
 
-            // child process
             isParent = fork();
+
+            // child process
             if (!isParent){
                 
                 char *argv[MAX_ARGS];
                 parseArgs(line, argv);
+                
+                // check if the command actually exists
+                struct stat file_info;
+                if (stat(argv[0], &file_info) < 0){
+                    // if we were unable to find the command and a file path was given
+                    if (strchr(argv[0], '/') != NULL){
+                        fprintf(stderr, "\nUnable to find command\n");
+                        exit(0);
+                    }
 
-                int ok = execvp(argv[0], argv);
+                    // search the path for it;
+                    char *paths = getenv("PATH");
+                    char *potential_path = strtok(paths, ":");
+                    char potential_full_path[MAX_LENGTH];
+                    // concatenate the path and the command name
+                    snprintf(potential_full_path, sizeof(potential_full_path), "%s%s", potential_path, argv[0]);
+
+                    // test every path
+                    while (stat(potential_full_path, &file_info) < 0 && (potential_path = strtok(NULL, ":")) != NULL){
+                        snprintf(potential_full_path, sizeof(potential_full_path), "%s%c%s", potential_path, '/', argv[0]);
+                        printf("%s",potential_full_path);
+                    }
+
+                    //all paths failed
+                    if (potential_path == NULL){
+                        fprintf(stderr, "\nUnable to find command\n");
+                        exit(0);
+                    // fonud it!
+                    } else {
+                        argv[0] = potential_full_path;
+                    }
+                }
+
+                int ok = execv(argv[0], argv);
                 if (ok < 0) {
-                fprintf(stderr, "Error executing command: %s\n", strerror( errno ));                   
+                    fprintf(stderr, "Error executing command: %s\n", strerror( errno ));                   
                 }
                 exit(0);
             }
+
+
             // parent process 
             else if (isParent > 0){
                 numChildProcesses++;
                 wait(NULL);
                 numChildProcesses--;
                 // signal(SIGCHLD, childHandler);
+            }
+
             // parent process handles the error
-            } else {
+            else {
                 fprintf(stderr, "Error forking child: %s\n", strerror( errno ));
             }
         }
