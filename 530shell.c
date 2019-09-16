@@ -4,6 +4,7 @@
 // I pledge that I have neither given nor received unauthorized aid on this assignment
 #include "stdio.h"
 #include <stdlib.h>
+#include <errno.h>
 #include <unistd.h>
 #include <string.h>
 #include <signal.h>
@@ -15,18 +16,18 @@ int isParent = 1;
 int numChildProcesses = 0;
 
 void ctrlCSignalHandler(int signal_number){
-    printf("exiting now");
     if (isParent == 0 || numChildProcesses == 0) {
+        printf("\nExiting Process\n");
         fflush(stdout);
         exit(0);
     }
     fflush(stdout);
 }
 
-void childHandler(int signal_number){
-    wait(2);
-    numChildProcesses--;
-}
+// void childHandler(int signal_number){
+//     wait(2);
+//     numChildProcesses--;
+// }
 
 void parseArgs(char *command, char **argv){
     char *token = strtok(command, " \n");
@@ -64,13 +65,21 @@ int main (int argc, char* argv) {
                 char *argv[MAX_ARGS];
                 parseArgs(line, argv);
 
-                execvp(argv[0], argv);
+                int ok = execvp(argv[0], argv);
+                if (ok < 0) {
+                fprintf(stderr, "Error executing command: %s\n", strerror( errno ));                   
+                }
                 exit(0);
             }
             // parent process 
-            else {
+            else if (isParent > 0){
                 numChildProcesses++;
-                signal(SIGCHLD, childHandler);
+                wait(NULL);
+                numChildProcesses--;
+                // signal(SIGCHLD, childHandler);
+            // parent process handles the error
+            } else {
+                fprintf(stderr, "Error forking child: %s\n", strerror( errno ));
             }
         }
         printf ("%% ");
