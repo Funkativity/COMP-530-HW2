@@ -3,17 +3,48 @@
 // and executes them
 // I pledge that I have neither given nor received unauthorized aid on this assignment
 #include "stdio.h"
+#include <stdlib.h>
+#include <unistd.h>
 #include <string.h>
-#define MAX 100
+#include <signal.h>
+#include <sys/wait.h>
+#define MAX_ARGS 100
+#define MAX_LENGTH 1000
+
+int isParent = 1;
+int numChildProcesses = 0;
+
+void ctrlCSignalHandler(int signal_number){
+    printf("exiting now");
+    if (isParent == 0 || numChildProcesses == 0) {
+        fflush(stdout);
+        exit(0);
+    }
+    fflush(stdout);
+}
+
+void childHandler(int signal_number){
+    wait(2);
+    numChildProcesses--;
+}
+
+void parseArgs(char *command, char **argv){
+    char *token = strtok(command, " \n");
+    *argv++ = token;
+    while (token != NULL){
+        token = strtok(NULL, " \n");
+        *argv++ = token;
+    }
+}
 
 int main (int argc, char* argv) {
-    char line[MAX];
-
+    char *line = (char*) malloc(sizeof(char) * MAX_LENGTH);
+    signal(SIGINT, ctrlCSignalHandler); 
     // print initial % signifying ready for input
     printf ("%% ");
 
     // keep iterating until end of file is reached
-    while(fgets(line, MAX, stdin)) {
+    while(fgets(line, MAX_LENGTH, stdin)) {
 
         // case where buffer overflows, don't run anything
         if (line[strlen(line) -1] != '\n') {
@@ -25,7 +56,22 @@ int main (int argc, char* argv) {
         }
         // valid input
         else {
-            printf("%s", line);
+
+            // child process
+            isParent = fork();
+            if (!isParent){
+                
+                char *argv[MAX_ARGS];
+                parseArgs(line, argv);
+
+                execvp(argv[0], argv);
+                exit(0);
+            }
+            // parent process 
+            else {
+                numChildProcesses++;
+                signal(SIGCHLD, childHandler);
+            }
         }
         printf ("%% ");
     }
