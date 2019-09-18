@@ -46,11 +46,13 @@ int main (int argc, char* argv) {
     signal(SIGINT, ctrlCSignalHandler); 
     // print initial % signifying ready for input
     printf ("%% ");
+    fflush(stdout);
     int num_iterations = 0;
     // keep iterating until end of file is reached
     while(fgets(line, MAX_LENGTH, stdin) || num_iterations == 0) {
         if (num_iterations != 0){
             printf ("%% ");
+            fflush(stdout);
         }        
         num_iterations++;
         // case where buffer overflows, don't run anything
