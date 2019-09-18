@@ -117,7 +117,7 @@ int main (int argc, char* argv) {
             else {
                 fprintf(stderr, "Error forking child: %s\n", strerror( errno ));
             }
-            printf ("%% ");
         }
+        printf ("%% ");
     }
 }
