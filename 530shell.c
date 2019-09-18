@@ -46,13 +46,16 @@ int main (int argc, char* argv) {
     signal(SIGINT, ctrlCSignalHandler); 
     // print initial % signifying ready for input
     printf ("%% ");
-
+    int num_iterations = 0;
     // keep iterating until end of file is reached
-    while(fgets(line, MAX_LENGTH, stdin)) {
-
+    while(fgets(line, MAX_LENGTH, stdin) || num_iterations == 0) {
+        if (num_iterations != 0){
+            printf ("%% ");
+        }        
+        num_iterations++;
         // case where buffer overflows, don't run anything
         if (line[strlen(line) -1] != '\n') {
-            printf("Character limit was exceeded, this command was not run\n");
+            fprintf(stderr, "\nCharacter limit was exceeded, this command was not run\n");
 
             // skip to the end of this whole ass line of code
             char c;
@@ -123,6 +126,5 @@ int main (int argc, char* argv) {
                 fprintf(stderr, "Error forking child: %s\n", strerror( errno ));
             }
         }
-        printf ("%% ");
     }
 }
