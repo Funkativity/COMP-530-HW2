@@ -18,11 +18,8 @@ int numChildProcesses = 0;
 
 void ctrlCSignalHandler(int signal_number){
     if (isParent == 0 || numChildProcesses == 0) {
-        printf("\nExiting Process\n");
-        fflush(stdout);
         exit(0);
     }
-    fflush(stdout);
 }
 
 // void childHandler(int signal_number){
@@ -43,18 +40,12 @@ void parseArgs(char *command, char **argv){
 
 int main (int argc, char* argv) {
     char *line = (char*) malloc(sizeof(char) * MAX_LENGTH);
-    signal(SIGINT, ctrlCSignalHandler); 
+    signal(SIGINT, ctrlCSignalHandler);
     // print initial % signifying ready for input
     printf ("%% ");
     fflush(stdout);
-    int num_iterations = 0;
     // keep iterating until end of file is reached
-    while(fgets(line, MAX_LENGTH, stdin) || num_iterations == 0) {
-        if (num_iterations != 0){
-            printf ("%% ");
-            fflush(stdout);
-        }        
-        num_iterations++;
+    while(fgets(line, MAX_LENGTH, stdin)) {
         // case where buffer overflows, don't run anything
         if (line[strlen(line) -1] != '\n') {
             fprintf(stderr, "\nCharacter limit was exceeded, this command was not run\n");
@@ -71,10 +62,10 @@ int main (int argc, char* argv) {
 
             // child process
             if (!isParent){
-                
+
                 char *argv[MAX_ARGS];
                 parseArgs(line, argv);
-                
+
                 // check if the command actually exists
                 struct stat file_info;
                 if (stat(argv[0], &file_info) < 0){
@@ -94,14 +85,13 @@ int main (int argc, char* argv) {
                     // test every path
                     while (stat(potential_full_path, &file_info) < 0 && (potential_path = strtok(NULL, ":")) != NULL){
                         snprintf(potential_full_path, sizeof(potential_full_path), "%s%c%s", potential_path, '/', argv[0]);
-                        printf("%s",potential_full_path);
                     }
 
                     //all paths failed
                     if (potential_path == NULL){
                         fprintf(stderr, "\nUnable to find command\n");
                         exit(0);
-                    // fonud it!
+                    // foud it!
                     } else {
                         argv[0] = potential_full_path;
                     }
@@ -109,13 +99,13 @@ int main (int argc, char* argv) {
 
                 int ok = execv(argv[0], argv);
                 if (ok < 0) {
-                    fprintf(stderr, "Error executing command: %s\n", strerror( errno ));                   
+                    fprintf(stderr, "Error executing command: %s\n", strerror( errno ));
                 }
                 exit(0);
             }
 
 
-            // parent process 
+            // parent process
             else if (isParent > 0){
                 numChildProcesses++;
                 wait(NULL);
@@ -127,6 +117,7 @@ int main (int argc, char* argv) {
             else {
                 fprintf(stderr, "Error forking child: %s\n", strerror( errno ));
             }
+            printf ("%% ");
         }
     }
 }
